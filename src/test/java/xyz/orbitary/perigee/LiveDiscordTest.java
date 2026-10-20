@@ -74,7 +74,7 @@ class LiveDiscordTest {
                 System.out.println("[live] " + type + " (documented rpcSupported=" + type.rpcSupported() + ") -> " + outcome);
                 Thread.sleep(1_000);
             }
-            client.clearActivity().get(10, TimeUnit.SECONDS);
+            client.clearActivity().get(30, TimeUnit.SECONDS);
         }
     }
 
