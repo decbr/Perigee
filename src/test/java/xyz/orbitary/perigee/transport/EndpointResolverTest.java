@@ -8,10 +8,14 @@
 package xyz.orbitary.perigee.transport;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +37,7 @@ class EndpointResolverTest {
 
     @Test
     void unixFollowsDocumentedOrderWithSandboxesAndFallback() {
-        Map<String, String> env = Map.of("XDG_RUNTIME_DIR", "/run/user/1000", "TMPDIR", "/var/tmp/", "TEMP", "/run/user/1000");
+        Map<String, String> env = Map.of("XDG_RUNTIME_DIR", "/run/user/1", "TMPDIR", "/var/tmp/", "TEMP", "/run/user/1");
 
         List<String> endpoints = EndpointResolver.resolve(false, env, List.of("/custom"));
 
@@ -41,13 +45,13 @@ class EndpointResolverTest {
         assertEquals(
           List.of(
             "/custom/discord-ipc-0",
-            "/run/user/1000/discord-ipc-0",
-            "/run/user/1000/app/com.discordapp.Discord/discord-ipc-0",
-            "/run/user/1000/snap.discord/discord-ipc-0",
-            "/run/user/1000/app/com.discordapp.DiscordPTB/discord-ipc-0",
-            "/run/user/1000/snap.discord-ptb/discord-ipc-0",
-            "/run/user/1000/app/com.discordapp.DiscordCanary/discord-ipc-0",
-            "/run/user/1000/snap.discord-canary/discord-ipc-0",
+            "/run/user/1/discord-ipc-0",
+            "/run/user/1/app/com.discordapp.Discord/discord-ipc-0",
+            "/run/user/1/snap.discord/discord-ipc-0",
+            "/run/user/1/app/com.discordapp.DiscordPTB/discord-ipc-0",
+            "/run/user/1/snap.discord-ptb/discord-ipc-0",
+            "/run/user/1/app/com.discordapp.DiscordCanary/discord-ipc-0",
+            "/run/user/1/snap.discord-canary/discord-ipc-0",
             "/var/tmp/discord-ipc-0",
             "/tmp/discord-ipc-0"
           ), firstOfEach
@@ -107,6 +111,18 @@ class EndpointResolverTest {
         for (String sandbox : List.of("app/com.discordapp.DiscordPTB", "snap.discord-ptb", "app/com.discordapp.DiscordCanary", "snap.discord-canary")) {
             assertTrue(endpoints.contains("/run/user/1/" + sandbox + "/discord-ipc-0"), sandbox);
         }
+    }
+
+    @Test
+    void flatpakClientsAreFoundInsideTheirXdgRunFolders(@TempDir Path runtime) throws IOException {
+        Files.createDirectories(runtime.resolve(".flatpak/dev.vencord.Vesktop/xdg-run"));
+        Files.createDirectories(runtime.resolve(".flatpak/123456"));
+
+        List<String> endpoints = EndpointResolver.resolve(false, Map.of("XDG_RUNTIME_DIR", runtime.toString()), List.of());
+
+        int vesktop = endpoints.indexOf(runtime + "/.flatpak/dev.vencord.Vesktop/xdg-run/discord-ipc-0");
+        assertTrue(vesktop > endpoints.indexOf(runtime + "/snap.discord-canary/discord-ipc-0"), "after the official sandboxes");
+        assertTrue(endpoints.stream().noneMatch(path -> path.contains(".flatpak/123456")), "instance folders without xdg-run are skipped");
     }
 
     static Stream<Arguments> macOsEnvironments() {

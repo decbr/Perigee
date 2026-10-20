@@ -7,11 +7,15 @@
 
 package xyz.orbitary.perigee.transport;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 
 /**
@@ -52,6 +56,7 @@ public final class EndpointResolver {
                     for (String sub : SANDBOX_SUBDIRS) {
                         bases.add(withSeparator(dir) + sub + "/");
                     }
+                    bases.addAll(flatpakRuntimeDirs(Path.of(dir, ".flatpak")));
                 }
             }
             bases.add("/tmp/");
@@ -81,6 +86,23 @@ public final class EndpointResolver {
 
     private static String withSeparator(String dir) {
         return dir.endsWith("/") ? dir : dir + "/";
+    }
+
+    /**
+     * rather than littering SANDBOX_SUBDIRS with variations of
+     * ".flatpak/dev.vencord.Vesktop/xdg-run"
+     * for every client under the sun, find them all at once.
+     */
+    private static List<String> flatpakRuntimeDirs(Path flatpakDir) {
+        try (Stream<Path> apps = Files.list(flatpakDir)) {
+            return apps.map(app -> app.resolve("xdg-run"))
+              .filter(Files::isDirectory)
+              .map(path -> path + "/")
+              .sorted()
+              .toList();
+        } catch (IOException | SecurityException e) {
+            return List.of();
+        }
     }
 
 }

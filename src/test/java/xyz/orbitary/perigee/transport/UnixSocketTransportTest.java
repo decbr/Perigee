@@ -86,6 +86,8 @@ class UnixSocketTransportTest {
         IOException e = assertThrows(IOException.class, () -> TransportConnector.connect(List.of(dir.resolve("a").toString(), dir.resolve("b").toString()), false));
 
         assertEquals(2, e.getSuppressed().length);
+        assertTrue(String.valueOf(e.getSuppressed()[0].getMessage()).startsWith(dir.resolve("a") + ": "));
+        assertTrue(String.valueOf(e.getSuppressed()[1].getMessage()).startsWith(dir.resolve("b") + ": "));
     }
 
     @Test

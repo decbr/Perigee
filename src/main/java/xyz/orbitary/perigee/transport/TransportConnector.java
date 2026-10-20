@@ -23,7 +23,7 @@ public final class TransportConnector {
             try {
                 return windows ? WindowsPipeTransport.connect(endpoint) : UnixSocketTransport.connect(endpoint);
             } catch (IOException | RuntimeException e) {
-                failure.addSuppressed(e);
+                failure.addSuppressed(new IOException(endpoint + ": " + e, e));
             }
         }
         throw failure;
